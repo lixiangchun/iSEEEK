@@ -24,8 +24,8 @@ class LineDataset(Dataset):
 device = "cuda" if torch.cuda.is_available() else "cpu" 
 torch.set_num_threads(2)
 
-tokenizer = PreTrainedTokenizerFast.from_pretrained("lixiangchun/transcriptome-iseeek")
-model = BertForMaskedLM.from_pretrained("lixiangchun/transcriptome-iseeek").bert
+tokenizer = PreTrainedTokenizerFast.from_pretrained("TJMUCH/transcriptome-iseeek")
+model = BertForMaskedLM.from_pretrained("TJMUCH/transcriptome-iseeek").bert
 model = model.to(device)
 model.eval()
 
