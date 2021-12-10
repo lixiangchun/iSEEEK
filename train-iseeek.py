@@ -27,6 +27,7 @@ class GeneRankingDataset(Dataset):
         self.lines = self.load_lines(text_file)
 
     def load_lines(self, text_file):
+        lines = []
         f = open(text_file)
         for line in f:
             line = line.strip()
@@ -38,6 +39,7 @@ class GeneRankingDataset(Dataset):
             else:
                 lines.append(" ".join(a[0:self.max_len]))
         f.close()
+        return lines
 
     def __len__(self):
         return len(self.lines)
