@@ -31,8 +31,8 @@ model.eval()
 
 
 ## Data desposited in https://huggingface.co/TJMUCH/transcriptome-iseeek/tree/main
-lines = [s.strip() for s in gzip.open("pbmc_ranking.txt.gz")]
-labels = [s.strip() for s in gzip.open("pbmc_label.txt.gz")]
+lines = [s.strip().decode() for s in gzip.open("pbmc_ranking.txt.gz")]
+labels = [s.strip().decode() for s in gzip.open("pbmc_label.txt.gz")]
 labels = np.asarray(labels)
 
 
