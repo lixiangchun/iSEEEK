@@ -1,24 +1,68 @@
+
 # iSEEEK
 A universal approach for integrating super large-scale single-cell transcriptomes by exploring gene rankings
 
-An example to use the pretrained model.
 ```python
-from transformers import PreTrainedTokenizerFast, BertForMaskedLM
+## An simple pipeline for single-cell analysis
+import torch
 import re
+from tqdm import tqdm
+import numpy as np
+import scanpy as sc
+from torch.utils.data import DataLoader, Dataset
+from transformers import PreTrainedTokenizerFast, BertForMaskedLM 
 
-tokenizer = PreTrainedTokenizerFast.from_pretrained("lixiangchun/transcriptome_iseeek_13millioncells_128tokens")
-iseeek = BertForMaskedLM.from_pretrained("lixiangchun/transcriptome_iseeek_13millioncells_128tokens")
+class LineDataset(Dataset):
+    def __init__(self, lines):
+        self.lines = lines
+        self.regex = re.compile(r'\-|\.')
+    def __getitem__(self, i):
+        return self.regex.sub('_', self.lines[i])
+    def __len__(self):
+        return len(self.lines)
 
-a = ["B2M MTRNR2L8 UBC FOS TMSB4X UBB FTH1 IFITM1 TPT1 FTL DUSP1", "KRT14 MTRNR2L8 KRT6A B2M GAPDH S100A8 S100A9 KRT5"]
+device = "cuda" if torch.cuda.is_available() else "cpu" 
+torch.set_num_threads(2)
 
-# Replace '-' and '.' with '_'
-a = [re.sub(r'\-|\.', '_', s) for s in a]  
+tokenizer = PreTrainedTokenizerFast.from_pretrained("lixiangchun/transcriptome-iseeek")
+model = BertForMaskedLM.from_pretrained("lixiangchun/transcriptome-iseeek").bert
+model = model.to(device)
+model.eval()
 
-batch = tokenizer(a, max_length=128, truncation=True, padding=True, return_tensors="pt")
-out = iseeek.bert(**batch)
 
-# [CLS] representation
-feature = out.last_hidden_state[:,0,:]
+## Data desposited in https://huggingface.co/TJMUCH/transcriptome-iseeek/tree/main
+lines = [s.strip() for s in gzip.open("pbmc_ranking.txt.gz")]
+labels = [s.strip() for s in gzip.open("pbmc_label.txt.gz")]
+labels = np.asarray(labels)
+
+
+ds = LineDataset(lines)
+dl = DataLoader(ds, batch_size=80)
+
+features = []
+
+for a in tqdm(dl, total=len(dl)):
+    batch = tokenizer(a, max_length=128, truncation=True, 
+               padding=True, return_tensors="pt")
+
+    for k, v in batch.items():
+        batch[k] = v.to(device)
+
+    with torch.no_grad():
+        out = model(**batch)
+
+    f = out.last_hidden_state[:,0,:]
+    features.extend(f.tolist())
+
+features = np.stack(features)
+
+adata = sc.AnnData(features)
+adata.obs['celltype'] = labels
+adata.obs.celltype = adata.obs.celltype.astype("category")
+sc.pp.neighbors(adata, use_rep='X')
+sc.tl.umap(adata)
+sc.tl.leiden(adata)
+sc.pl.umap(adata, color=['celltype','leiden'],save= "UMAP")
 
 ```
 
