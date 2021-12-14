@@ -34,7 +34,7 @@ class GeneRankingDataset(Dataset):
             if line.isspace():
                 continue
             a = line.split()
-            if len(a) <= max_len:
+            if len(a) <= self.max_len:
                 lines.append(line)
             else:
                 lines.append(" ".join(a[0:self.max_len]))
